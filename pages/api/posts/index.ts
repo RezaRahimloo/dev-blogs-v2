@@ -1,8 +1,16 @@
 import dbConnect from "@/lib/dbConnect";
+import { readFile } from "@/lib/utils";
 import { postValidationSchema, validateSchema } from "@/lib/validator";
+import Post from "@/models/Post";
 import Joi from "joi";
 import { NextApiHandler } from "next";
 import { join } from "path";
+
+export const config = {
+  api: {
+    bodyParser: false
+  }
+};
 
 const handler: NextApiHandler = async (req, res) => {
   const { method } = req;
@@ -20,13 +28,42 @@ const handler: NextApiHandler = async (req, res) => {
   }
 };
 
-const createNewPost: NextApiHandler = (req, res) => {
-  const { body } = req;
-  const error = validateSchema(postValidationSchema, body);
+const createNewPost: NextApiHandler = async (req, res) => {
+  const { files, body } = await readFile(req);
+  
+  let tags = [];
+  if (body.tags) {
+    tags = JSON.parse(body.tags as any)
+  }
+
+  const error = validateSchema(postValidationSchema, { ...body, tags });
   if (error) {
     res.status(400).json({ error });
   }
 
-  res.json({ ok: true });
+  const {
+    title,
+    content,
+    slug,
+    meta
+  } = body;
+
+  await dbConnect();
+  const alreadyExists = await Post.findOne({ slug });
+  if (alreadyExists) {
+    return res.status(400).json({ error: "Slug needs to be unique" });
+  }
+
+  const newPost = new Post({
+    title,
+    slug,
+    meta,
+    tags,
+    content
+  });
+
+  await newPost.save();
+
+  res.json({ post: newPost });
 };
 export default handler;
