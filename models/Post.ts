@@ -1,6 +1,17 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, model, models, ObjectId, Model } from "mongoose";
 
-const PostSchema = new Schema(
+interface PostModelSchema {
+  title: string;
+  slug: string;
+  meta: string;
+  content: string;
+  tags: string[];
+  thumbnail?: { url: string; public_id: string };
+  author: ObjectId;
+  createdAt: Date;
+}
+
+const PostSchema = new Schema<PostModelSchema>(
   {
     title: {
       type: String,
@@ -30,8 +41,7 @@ const PostSchema = new Schema(
       type: Object,
       url: String,
       public_id: String,
-      required: true,
-      trim: true,
+      required: false,
     },
     author: {
       type: Schema.Types.ObjectId,
@@ -41,6 +51,6 @@ const PostSchema = new Schema(
   { timestamps: true }
 );
 
-const Post = models?.Post || model('Post', PostSchema);
+const Post = models?.Post || model("Post", PostSchema);
 
-export default Post;
+export default Post as Model<PostModelSchema>;
